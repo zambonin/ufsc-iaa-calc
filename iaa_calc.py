@@ -20,42 +20,61 @@ def get_history(browser):
     browser.open('https://cagr.sistemas.ufsc.br/modules/aluno/historicoEscolar/')
     hist = browser.find_all(class_='rich-table-cell ')
 
-    hours = [int(hist[i].text) for i in range(2, len(hist), 7)]
-    grades = [float(hist[i].text) for i in range(3, len(hist), 7)]
+    grades = []
+    for i in range(2, len(hist), 7):
+        grades.append((int(hist[i].text), float(hist[i+1].text)))
 
-    weigh_grades = sum([h*g for h, g in zip(hours, grades)])
-    total_hours = sum(hours)
+    weighted_grades, total_hours = 0, 0
+    for h in grades:
+        weighted_grades += h[0] * h[1]
+        total_hours += h[0]
 
-    return [weigh_grades, total_hours]
+    return [weighted_grades, total_hours]
 
-def get_actual(browser):
+def get_current(browser):
     url = 'https://cagr.sistemas.ufsc.br/modules/aluno/espelhoMatricula/'
     browser.open(url)
 
     if browser.url == url:
         mirror = browser.find_all(class_='rich-table-cell ')
 
-        actual = [i.text for i in mirror if "id2" in str(i)]
-        disciplines = [(actual[i], int(actual[i+2])*18)
-                            for i in range(3, len(actual), 10)]
+        current = [i.text for i in mirror if "id2" in str(i)]
+        disciplines = [(current[i], int(current[i+2])*18)
+                            for i in range(3, len(current), 10)]
 
-        nome = browser.find(class_='aluno_info_col4').text
-        return (nome, disciplines)
+        name = browser.find(class_='aluno_info_col4').text
+        return (name, disciplines)
     else:
         print("Falha de autenticação!")
         exit()
+
+def possibilities(old_grades, current):
+    from itertools import product
+
+    grades, weights = old_grades[:], []
+    for name, hours in current[1]:
+        weights.append([poss/2 * hours for poss in range(21)])
+        grades[1] += hours
+
+    comb = set([sum(t) for t in product(*weights)])
+    poss_iaa = sorted(set([round((grades[0] + i)/grades[1], 2) for i in comb]))
+
+    return (poss_iaa[0], poss_iaa[-1])
 
 username = input("Insira sua matrícula: ")
 password = getpass("Insira sua senha do CAGR: ")
 
 browser = login(username, password)
-history = get_history(browser)
-actual = get_actual(browser)
+history, current = get_history(browser), get_current(browser)
 
-iaa = history[0] / history[1]
-print("Olá, %s! Seu IAA é %.2f." % (actual[0], iaa))
+print("Olá, %s! Seu IAA é %.2f." % (current[0], history[0] / history[1]))
 
-for name, hours in actual[1]:
+var = input("Deseja saber o quanto seu IAA pode variar neste semestre? [s/N]: ")
+if var == 's' or var == 'S':
+    print('Seu IAA pode variar de %.2f a %.2f.'
+            % possibilities(history, current))
+
+for name, hours in current[1]:
     grade = float(input("Possível nota em %s: " % name))
     while grade > 10 or grade < 0:
         grade = float(input("Nota inválida. Possível nota: "))
