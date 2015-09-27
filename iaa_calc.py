@@ -53,10 +53,10 @@ def possibilities(old_grades, current):
         weights.append([poss/2 * hours for poss in range(21)])
         grades[1] += hours
 
-    comb = set([sum(t) for t in product(*weights)])
-    poss_iaa = sorted(set([round((grades[0] + i)/grades[1], 2) for i in comb]))
+    comb = set(map(sum, product(*weights)))
+    poss_iaa = set([round((grades[0] + i)/grades[1], 2) for i in comb])
 
-    return (poss_iaa[0], poss_iaa[-1])
+    return (min(poss_iaa), max(poss_iaa))
 
 username = input("Insira sua matrícula: ")
 password = getpass("Insira sua senha do CAGR: ")
