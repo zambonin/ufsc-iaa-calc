@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from functools import reduce
 from getpass import getpass
+from itertools import product
 from robobrowser import RoboBrowser
 
 def login(user, passwd):
@@ -20,16 +22,13 @@ def get_history(browser):
     browser.open('https://cagr.sistemas.ufsc.br/modules/aluno/historicoEscolar/')
     hist = browser.find_all(class_='rich-table-cell ')
 
-    grades = []
-    for i in range(2, len(hist), 7):
-        grades.append((int(hist[i].text), float(hist[i+1].text)))
+    grades = [[int(hours.text), float(grade.text)]
+                for hours, grade in zip(hist[2::7], hist[3::7])]
 
-    weighted_grades, total_hours = 0, 0
-    for h in grades:
-        weighted_grades += h[0] * h[1]
-        total_hours += h[0]
+    weight, total_hours = reduce(
+        lambda g, w: [g[0]+(w[0]*w[1]), g[1]+w[0]], grades, [0, 0])
 
-    return [weighted_grades, total_hours]
+    return [weight, total_hours]
 
 def get_current(browser):
     url = 'https://cagr.sistemas.ufsc.br/modules/aluno/espelhoMatricula/'
@@ -39,18 +38,16 @@ def get_current(browser):
         mirror = browser.find_all(class_='rich-table-cell ')
 
         current = [i.text for i in mirror if "id2" in str(i)]
-        disciplines = [(current[i], int(current[i+2])*18)
-                            for i in range(3, len(current), 10)]
+        disciplines = [(name, int(hours)*18) for name,
+                            hours in zip(current[3::10], current[5::10])]
 
-        name = browser.find(class_='aluno_info_col4').text
-        return (name, disciplines)
+        student = browser.find(class_='aluno_info_col4').text
+        return (student, disciplines)
     else:
         print("Falha de autenticação!")
         exit()
 
 def possibilities(old_grades, current):
-    from itertools import product
-
     grades, weights = old_grades[:], []
     for name, hours in current[1]:
         weights.append([poss/2 * hours for poss in range(21)])
