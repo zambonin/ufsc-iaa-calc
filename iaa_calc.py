@@ -6,6 +6,7 @@ from getpass import getpass
 from itertools import product
 from robobrowser import RoboBrowser
 
+
 def login(user, passwd):
     browser = RoboBrowser(history=True, parser='html.parser')
 
@@ -18,17 +19,20 @@ def login(user, passwd):
 
     return browser
 
+
 def get_history(browser):
-    browser.open('https://cagr.sistemas.ufsc.br/modules/aluno/historicoEscolar/')
+    browser.open("https://cagr.sistemas.ufsc.br/"
+                 "modules/aluno/historicoEscolar/")
     hist = browser.find_all(class_='rich-table-cell ')
 
     grades = [[int(hours.text), float(grade.text)]
-                for hours, grade in zip(hist[2::7], hist[3::7])]
+              for hours, grade in zip(hist[2::7], hist[3::7])]
 
     weight, total_hours = reduce(
         lambda g, w: [g[0]+(w[0]*w[1]), g[1]+w[0]], grades, [0, 0])
 
     return [weight, total_hours]
+
 
 def get_current(browser):
     url = 'https://cagr.sistemas.ufsc.br/modules/aluno/espelhoMatricula/'
@@ -38,16 +42,17 @@ def get_current(browser):
         mirror = browser.find_all(class_='rich-table-cell ')
 
         current = [i.text for i in mirror if "id2" in str(i)]
-        disciplines = [(name, int(hours)*18) for name,
-                            hours in zip(current[3::10], current[5::10])]
+        disciplines = [(name, int(hours)*18) for name, hours in
+                       zip(current[3::10], current[5::10])]
 
         student = browser.find(class_='aluno_info_col4').text
         return (student, disciplines)
     else:
         print("Falha de autenticação!")
-        exit()
+        raise SystemExit
 
-def possibilities(old_grades, current):
+
+def iaa_poss(old_grades, current):
     grades, weights = old_grades[:], []
     for name, hours in current[1]:
         weights.append([poss/2 * hours for poss in range(21)])
@@ -66,10 +71,9 @@ history, current = get_history(browser), get_current(browser)
 
 print("Olá, %s! Seu IAA é %.2f." % (current[0], history[0] / history[1]))
 
-var = input("Deseja saber o quanto seu IAA pode variar neste semestre? [s/N]: ")
+var = input("Deseja saber quanto seu IAA pode variar neste semestre? [s/N]: ")
 if var == 's' or var == 'S':
-    print('Seu IAA pode variar de %.2f a %.2f.'
-            % possibilities(history, current))
+    print('Seu IAA pode variar de %.2f a %.2f.' % iaa_poss(history, current))
 
 for name, hours in current[1]:
     grade = float(input("Possível nota em %s: " % name))
@@ -79,4 +83,4 @@ for name, hours in current[1]:
     history[1] += hours
 
 new_iaa = history[0] / history[1]
-print ("Com as notas informadas, seu possível IAA será %.2f." % new_iaa)
+print("Com as notas informadas, seu possível IAA será %.2f." % new_iaa)
