@@ -52,6 +52,20 @@ def get_current(browser):
         raise SystemExit
 
 
+def round_ufsc(grade):
+    decimal = grade % 1
+    if decimal < .25:
+        return float(int(grade))
+    if decimal >= .25 and decimal < .75:
+        return float(int(grade) + 0.5)
+    if decimal >= .75:
+        return float(int(grade) + 1)
+
+
+def round_iaa(grade):
+    return float(str(grade)[:4])
+
+
 def iaa_poss(old_grades, current):
     grades, weights = old_grades[:], []
     for name, hours in current[1]:
@@ -61,7 +75,8 @@ def iaa_poss(old_grades, current):
     comb = set(map(sum, product(*weights)))
     poss_iaa = set([round((grades[0] + i)/grades[1], 2) for i in comb])
 
-    return (min(poss_iaa), max(poss_iaa))
+    return (round_iaa(min(poss_iaa)), round_iaa(max(poss_iaa)))
+
 
 username = input("Insira sua matrícula: ")
 password = getpass("Insira sua senha do CAGR: ")
@@ -69,18 +84,20 @@ password = getpass("Insira sua senha do CAGR: ")
 browser = login(username, password)
 history, current = get_history(browser), get_current(browser)
 
-print("Olá, %s! Seu IAA é %.2f." % (current[0], history[0] / history[1]))
+iaa = round_iaa(history[0] / history[1])
+print("Olá, %s! Seu IAA é %s." % (current[0], iaa))
 
 var = input("Deseja saber quanto seu IAA pode variar neste semestre? [s/N]: ")
 if var == 's' or var == 'S':
     print('Seu IAA pode variar de %.2f a %.2f.' % iaa_poss(history, current))
 
 for name, hours in current[1]:
-    grade = float(input("Possível nota em %s: " % name))
+    grade = round_ufsc(float(input("Possível nota em %s: " % name)))
     while grade > 10 or grade < 0:
-        grade = float(input("Nota inválida. Possível nota: "))
+        grade = round_ufsc(float(input("Nota inválida. Possível nota: ")))
     history[0] += grade * hours
     history[1] += hours
 
-new_iaa = history[0] / history[1]
-print("Com as notas informadas, seu possível IAA será %.2f." % new_iaa)
+new_iaa = round_iaa(history[0] / history[1])
+print("""Com as notas informadas,
+      seu possível IAA será \033[1m%s\033[0m.""" % new_iaa)
