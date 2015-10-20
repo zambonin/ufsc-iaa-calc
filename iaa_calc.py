@@ -52,18 +52,18 @@ def get_current(browser):
         raise SystemExit
 
 
+def round_iaa(grade):
+    return float(str(grade)[:4])
+
+
 def round_ufsc(grade):
     decimal = grade % 1
     if decimal < .25:
         return float(int(grade))
-    if decimal >= .25 and decimal < .75:
+    if (.25 < decimal <= .75):
         return float(int(grade) + 0.5)
     if decimal >= .75:
         return float(int(grade) + 1)
-
-
-def round_iaa(grade):
-    return float(str(grade)[:4])
 
 
 def iaa_poss(old_grades, current):
@@ -88,21 +88,23 @@ iaa = round_iaa(history[0] / history[1])
 print("Olá, %s! Seu IAA é %s." % (current[0], iaa))
 
 var = input("Deseja saber quanto seu IAA pode variar neste semestre? [s/N]: ")
-if var == 's' or var == 'S':
+if var.lower() == 's':
     print('Seu IAA pode variar de %.2f a %.2f.' % iaa_poss(history, current))
 
 semester = [0, 0]
 for name, hours in current[1]:
-    grade = round_ufsc(float(input("Possível nota em %s: " % name)))
-    while grade > 10 or grade < 0:
-        grade = round_ufsc(float(input("Nota inválida. Possível nota: ")))
-    history[0] += grade * hours
-    history[1] += hours
+    while True:
+        try:
+            grade = round_ufsc(float(input("Possível nota em %s: " % name)))
+            if not (0 <= grade <= 10):
+                raise ValueError
+            break
+        except ValueError:
+            print("Nota inválida.")
     semester[0] += grade * hours
     semester[1] += hours
 
-new_iaa = round_iaa(history[0] / history[1])
+new_iaa = round_iaa((history[0] + semester[0]) / (history[1] + semester[1]))
 ia = round_iaa(semester[0] / semester[1])
-print("""Com as notas informadas,
-seu possível IAA será \033[1m%s\033[0m
-e seu IA será %s.""" % (new_iaa, ia))
+print("Com as notas informadas, seu possível IAA será \033[1m%s\033[0m "
+      "e seu IA será %s." % (new_iaa, ia))
