@@ -91,13 +91,18 @@ var = input("Deseja saber quanto seu IAA pode variar neste semestre? [s/N]: ")
 if var == 's' or var == 'S':
     print('Seu IAA pode variar de %.2f a %.2f.' % iaa_poss(history, current))
 
+semester = [0, 0]
 for name, hours in current[1]:
     grade = round_ufsc(float(input("Possível nota em %s: " % name)))
     while grade > 10 or grade < 0:
         grade = round_ufsc(float(input("Nota inválida. Possível nota: ")))
     history[0] += grade * hours
     history[1] += hours
+    semester[0] += grade * hours
+    semester[1] += hours
 
 new_iaa = round_iaa(history[0] / history[1])
+ia = round_iaa(semester[0] / semester[1])
 print("""Com as notas informadas,
-      seu possível IAA será \033[1m%s\033[0m.""" % new_iaa)
+seu possível IAA será \033[1m%s\033[0m
+e seu IA será %s.""" % (new_iaa, ia))
