@@ -20,10 +20,10 @@ def login(user, passwd):
 
 
 def get_history(browser):
-    browser.open("https://cagr.sistemas.ufsc.br/"
-                 "modules/aluno/historicoEscolar/")
-    hist = browser.find_all(class_='rich-table-cell ')
+    url = "https://cagr.sistemas.ufsc.br/modules/aluno/historicoEscolar/"
+    browser.open(url)
 
+    hist = browser.find_all(class_='rich-table-cell ')
     grades = [[int(hours.text), float(grade.text)]
               for hours, grade in zip(hist[2::7], hist[3::7])]
 
@@ -31,17 +31,17 @@ def get_history(browser):
 
 
 def get_current(browser):
-    url = 'https://cagr.sistemas.ufsc.br/modules/aluno/espelhoMatricula/'
+    url = "https://cagr.sistemas.ufsc.br/modules/aluno/espelhoMatricula/"
     browser.open(url)
 
     if browser.url == url:
         mirror = browser.find_all(class_='rich-table-cell ')
-
         current = [i.text for i in mirror if "id2" in str(i)]
         disciplines = [(name, int(hours)*18) for name, hours in
-                       zip(current[3::10], current[5::10])]
+                       zip(current[3::10], current[5::10]) if int(hours)]
 
         student = browser.find(class_='aluno_info_col4').text
+
         return (student, disciplines)
     else:
         print("Falha de autenticação!")
