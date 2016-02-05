@@ -3,7 +3,7 @@
 
 from functools import reduce
 from getpass import getpass
-from itertools import product
+from operator import mul
 from robobrowser import RoboBrowser
 
 
@@ -17,6 +17,15 @@ def login(user, passwd):
     browser.submit_form(form)
 
     return browser
+
+
+def get_student(browser):
+    url = "https://cagr.sistemas.ufsc.br/modules/aluno/cadastro/"
+    browser.open(url)
+
+    if browser.url == url:
+        return browser.find(class_='rich-panel-header ').text
+    raise SystemExit("Falha de autenticação!")
 
 
 def get_history(browser):
@@ -34,24 +43,12 @@ def get_current(browser):
     url = "https://cagr.sistemas.ufsc.br/modules/aluno/espelhoMatricula/"
     browser.open(url)
 
-    if browser.url == url:
-        mirror = browser.find_all(class_='rich-table-cell ')
-        current = [i.text for i in mirror if "id2" in str(i)]
-        disciplines = [(name, int(hours)*18) for name, hours in
-                       zip(current[3::10], current[5::10]) if int(hours)]
+    mirror = browser.find_all(class_='rich-table-cell ')
+    current = [i.text for i in mirror if "id2" in str(i)]
+    disciplines = [[name, int(hours)*18] for name, hours in
+                   zip(current[3::10], current[5::10]) if int(hours)]
 
-        student = browser.find(class_='aluno_info_col4').text
-
-        return (student, disciplines)
-    else:
-        print("Falha de autenticação!")
-        raise SystemExit
-
-
-def round_iaa(grade):
-    if isinstance(grade, list):
-        return float(str(grade[0] / grade[1])[:4])
-    return float(str(grade)[:4])
+    return disciplines
 
 
 def round_ufsc(grade):
@@ -65,37 +62,31 @@ def round_ufsc(grade):
 
 
 def ia_calc(grades):
-    weight, total_hours = reduce(
-        lambda g, w: [g[0]+(w[0]*w[1]), g[1]+w[0]], grades, [0, 0])
-    return [weight, total_hours]
+    def sumproduct(lists):
+        return sum(reduce(mul, data) for data in lists)
+
+    return float(str(sumproduct(grades) / sum(i[0] for i in grades))[:4])
 
 
-def iaa_poss(old_grades, current):
-    grades, weights = ia_calc(old_grades), []
-    for name, hours in current[1]:
-        weights.append([poss/2 * hours for poss in range(21)])
-        grades[1] += hours
-
-    comb = set(map(sum, product(*weights)))
-    poss_iaa = set([(grades[0] + i)/grades[1] for i in comb])
-
-    return (round_iaa(min(poss_iaa)), round_iaa(max(poss_iaa)))
+def iaa_poss(history, current):
+    return (ia_calc(history + [[i[1], 0] for i in current]),
+            ia_calc(history + [[i[1], 10] for i in current]))
 
 
-username = input("Insira sua matrícula: ")
-password = getpass("Insira sua senha do CAGR: ")
+browser = login(input("Insira sua matrícula: "),
+                getpass("Insira sua senha do CAGR: "))
 
-browser = login(username, password)
+student = get_student(browser)
 history, current = get_history(browser), get_current(browser)
 
-print("Olá, {}! Seu IAA é {}.".format(current[0], round_iaa(ia_calc(history))))
+print("Olá, {}! Seu IAA é {}.".format(student, ia_calc(history)))
 
 var = input("Deseja saber quanto seu IAA pode variar neste semestre? [s/N]: ")
 if var.lower() == 's':
     print('Seu IAA pode variar de {} a {}.'
           .format(*iaa_poss(history, current)))
 
-for name, hours in current[1]:
+for name, hours in current:
     while True:
         try:
             grade = float(input("Possível nota em {}: ".format(name)))
@@ -106,9 +97,9 @@ for name, hours in current[1]:
             print("Nota inválida.")
     history.append([hours, round_ufsc(grade)])
 
-iaa = round_iaa(ia_calc(history))
-ia = round_iaa(ia_calc(history[-len(current[1]):]))
-iap = round_iaa(ia_calc([i for i in history if i[1] >= 6]))
+iaa = ia_calc(history)
+ia = ia_calc(history[-len(current):])
+iap = ia_calc([i for i in history if i[1] >= 6])
 
-print("Com as notas informadas, suas métricas serão:")
-print("IAA: \033[1m{}\033[0m \t IA: {} \t IAP: {}".format(iaa, ia, iap))
+print("Com as notas informadas, suas métricas serão:\n"
+      "IAA: \033[1m{}\033[0m \t IA: {} \t IAP: {}".format(iaa, ia, iap))
