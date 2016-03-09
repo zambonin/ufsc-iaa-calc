@@ -69,8 +69,7 @@ def ia_calc(grades):
 
 
 def iaa_poss(history, current):
-    return (ia_calc(history + [[i[1], 0] for i in current]),
-            ia_calc(history + [[i[1], 10] for i in current]))
+    return (ia_calc(history + [[i[1], j] for i in current]) for j in [0, 10])
 
 
 browser = login(input("Insira sua matrícula: "),
