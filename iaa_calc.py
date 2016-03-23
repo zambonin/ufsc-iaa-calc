@@ -4,6 +4,7 @@
 from functools import reduce
 from getpass import getpass
 from operator import mul
+from re import compile
 from robobrowser import RoboBrowser
 
 
@@ -19,34 +20,34 @@ def login(user, passwd):
     return browser
 
 
-def get_student(browser):
-    url = "https://cagr.sistemas.ufsc.br/modules/aluno/cadastro/"
-    browser.open(url)
-
-    if browser.url == url:
-        return browser.find(class_="rich-panel-header ").text
-    raise SystemExit("Falha de autenticação!")
-
-
-def get_history(browser):
+def get_student_data(browser):
     url = "https://cagr.sistemas.ufsc.br/modules/aluno/historicoEscolar/"
     browser.open(url)
+
+    if browser.url != url:
+        raise SystemExit("Falha de autenticação!")
 
     hist = browser.find_all(class_="rich-table-cell ")
     grades = [[int(hours.text), float(grade.text)]
               for hours, grade in zip(hist[2::7], hist[3::7])]
 
-    return grades
+    indexes = [browser.find_all(class_="disciplina_footer_col{}"
+                                .format(i))[-1].text for i in [4, 2, 6]]
+
+    return {
+        'name': browser.find(class_="rich-panel-header ").text,
+        'grades': grades,
+        'indexes': indexes,
+    }
 
 
 def get_current(browser):
     url = "https://cagr.sistemas.ufsc.br/modules/aluno/espelhoMatricula/"
     browser.open(url)
 
-    mirror = browser.find_all(class_="rich-table-cell ")
-    current = [i.text for i in mirror if "id2" in str(i)]
-    disciplines = [[name, int(hours)*18] for name, hours in
-                   zip(current[3::10], current[5::10]) if int(hours)]
+    current = browser.find_all(class_="rich-table-cell", id=compile("id2"))
+    disciplines = [[name.text, int(hours.text)*18] for name, hours in
+                   zip(current[3::10], current[5::10]) if int(hours.text)]
 
     return disciplines
 
@@ -68,37 +69,37 @@ def ia_calc(grades):
     return round(sumproduct(grades) / sum(i[0] for i in grades), 2)
 
 
-def iaa_poss(history, current):
-    return (ia_calc(history + [[i[1], j] for i in current]) for j in [0, 10])
+def get_input(history, current):
+    for name, hours in current:
+        while True:
+            try:
+                grade = float(input("Possível nota em {}: ".format(name)))
+                if not (0 <= grade <= 10):
+                    raise ValueError
+                break
+            except ValueError:
+                print("Nota inválida.")
+        history.append([hours, round_ufsc(grade)])
+
+    return history
 
 
-browser = login(input("Insira sua matrícula: "),
-                getpass("Insira sua senha do CAGR: "))
+if __name__ == '__main__':
+    browser = login(input("Insira sua matrícula: "),
+                    getpass("Insira sua senha do CAGR: "))
 
-student = get_student(browser)
-history, current = get_history(browser), get_current(browser)
+    student, current = get_student_data(browser), get_current(browser)
 
-print("Olá, {}! Seu IAA é {}.".format(student, ia_calc(history)))
+    print("Olá, {}! Seus índices são:\n"
+          "IAA: \033[1m{}\033[0m \t IA: {} \t IAP: {}".format(
+              student['name'], *student['indexes']))
 
-var = input("Deseja saber quanto seu IAA pode variar neste semestre? [s/N]: ")
-if var.lower() == "s":
-    print("Seu IAA pode variar de {} a {}."
-          .format(*iaa_poss(history, current)))
+    new_history = get_input(student['grades'], current)
+    new_indexes = [ia_calc(i) for i in [
+        new_history,
+        new_history[-len(current):],
+        [i for i in new_history if i[1] >= 6]
+    ]]
 
-for name, hours in current:
-    while True:
-        try:
-            grade = float(input("Possível nota em {}: ".format(name)))
-            if not (0 <= grade <= 10):
-                raise ValueError
-            break
-        except ValueError:
-            print("Nota inválida.")
-    history.append([hours, round_ufsc(grade)])
-
-iaa = ia_calc(history)
-ia = ia_calc(history[-len(current):])
-iap = ia_calc([i for i in history if i[1] >= 6])
-
-print("Com as notas informadas, suas métricas serão:\n"
-      "IAA: \033[1m{}\033[0m \t IA: {} \t IAP: {}".format(iaa, ia, iap))
+    print("Com as notas informadas, seus índices serão:\n"
+          "IAA: \033[1m{}\033[0m \t IA: {} \t IAP: {}".format(*new_indexes))
