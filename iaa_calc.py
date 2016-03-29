@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import re
+
 from functools import reduce
 from getpass import getpass
 from operator import mul
-from re import compile
 from robobrowser import RoboBrowser
 
 
@@ -45,7 +46,7 @@ def get_current(browser):
     url = "https://cagr.sistemas.ufsc.br/modules/aluno/espelhoMatricula/"
     browser.open(url)
 
-    current = browser.find_all(class_="rich-table-cell", id=compile("id2"))
+    current = browser.find_all(class_="rich-table-cell", id=re.compile("id2"))
     disciplines = [[name.text, int(hours.text)*18] for name, hours in
                    zip(current[3::10], current[5::10]) if int(hours.text)]
 
