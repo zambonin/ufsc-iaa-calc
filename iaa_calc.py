@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import re
@@ -79,10 +79,14 @@ def get_input(history, current):
                     raise ValueError
                 break
             except ValueError:
-                print("Nota inválida.")
+                print("Nota inválida.", end=' ')
         history.append([hours, round_ufsc(grade)])
 
     return history
+
+
+def print_indexes(indexes):
+    return "\nIAA: \033[1m{}\033[0m \t IA: {} \t IAP: {}".format(*indexes)
 
 
 if __name__ == '__main__':
@@ -91,9 +95,8 @@ if __name__ == '__main__':
 
     student, current = get_student_data(browser), get_current(browser)
 
-    print("Olá, {}! Seus índices são:\n"
-          "IAA: \033[1m{}\033[0m \t IA: {} \t IAP: {}".format(
-              student['name'], *student['indexes']))
+    print("Olá, {}! Seus índices são: {}".format(
+              student['name'], print_indexes(student['indexes'])))
 
     new_history = get_input(student['grades'], current)
     new_indexes = [ia_calc(i) for i in [
@@ -102,5 +105,5 @@ if __name__ == '__main__':
         [i for i in new_history if i[1] >= 6]
     ]]
 
-    print("Com as notas informadas, seus índices serão:\n"
-          "IAA: \033[1m{}\033[0m \t IA: {} \t IAP: {}".format(*new_indexes))
+    print("Com as notas informadas, seus índices serão: {}".format(
+        print_indexes(new_indexes)))
