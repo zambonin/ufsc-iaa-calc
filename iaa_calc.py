@@ -48,7 +48,7 @@ def get_current(browser):
 
     current = browser.find_all(class_="rich-table-cell", id=re.compile("id2"))
     disciplines = [[name.text, int(hours.text)*18] for name, hours in
-                   zip(current[3::10], current[5::10]) if int(hours.text)]
+                   zip(current[5::10], current[7::10]) if int(hours.text)]
 
     return disciplines
 
