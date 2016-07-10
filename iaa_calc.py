@@ -98,12 +98,17 @@ if __name__ == '__main__':
     print("Olá, {}! Seus índices são: {}".format(
               student['name'], print_indexes(student['indexes'])))
 
-    new_history = get_input(student['grades'], current)
-    new_indexes = [ia_calc(i) for i in [
-        new_history,
-        new_history[-len(current):],
-        [i for i in new_history if i[1] >= 6]
-    ]]
+    while True:
+        new_history = get_input(student['grades'][:], current)
+        new_indexes = [ia_calc(i) for i in [
+            new_history,
+            new_history[-len(current):],
+            [i for i in new_history if i[1] >= 6]
+        ]]
 
-    print("Com as notas informadas, seus índices serão: {}".format(
-        print_indexes(new_indexes)))
+        print("Com as notas informadas, seus índices serão: {}\n".format(
+            print_indexes(new_indexes)))
+
+        if not bool(input("Digite algo para realizar um novo cálculo ou "
+                          "aperte ENTER para sair: ")):
+            break
