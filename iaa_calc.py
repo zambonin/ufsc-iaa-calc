@@ -32,8 +32,11 @@ def get_student_data(browser):
     grades = [[int(hours.text), float(grade.text)]
               for hours, grade in zip(hist[2::7], hist[3::7])]
 
-    indexes = [browser.find_all(class_="disciplina_footer_col{}"
-                                .format(i))[-1].text for i in [4, 2, 6]]
+    try:
+        indexes = [browser.find_all(class_="disciplina_footer_col{}"
+                                    .format(i))[-1].text for i in [4, 2, 6]]
+    except IndexError:
+        raise SystemExit("CAGR indisponível.")
 
     return {
         'name': browser.find(class_="rich-panel-header ").text,
