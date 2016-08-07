@@ -50,10 +50,7 @@ def get_current(browser):
     browser.open(url)
 
     current = browser.find_all(class_="rich-table-cell", id=re.compile("id2"))
-    disciplines = [[name.text, int(hours.text)*18] for name, hours in
-                   zip(current[3::10], current[5::10]) if int(hours.text)]
-
-    return disciplines
+    return [name.text for name in current[3::10]]
 
 
 def round_ufsc(grade):
@@ -74,7 +71,7 @@ def ia_calc(grades):
 
 
 def get_input(history, current):
-    for name, hours in current:
+    for name in current:
         while True:
             try:
                 grade = float(input("Possível nota em {}: ".format(name)))
@@ -83,7 +80,16 @@ def get_input(history, current):
                 break
             except ValueError:
                 print("Nota inválida.", end=' ')
-        history.append([hours, round_ufsc(grade)])
+        while True:
+            try:
+                hours = int(input("Seu número de créditos: "))
+                if hours < 0:
+                    raise ValueError
+                break
+            except ValueError:
+                print("Entrada inválida.", end=' ')
+
+        history.append([hours * 18, round_ufsc(grade)])
 
     return history
 
