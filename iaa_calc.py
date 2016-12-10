@@ -25,6 +25,9 @@ def get_student_data(browser):
     url = "https://cagr.sistemas.ufsc.br/modules/aluno/historicoEscolar/"
     browser.open(url)
 
+    if "collecta" in browser.url:
+        browser.submit_form(browser.get_form(id="j_id20"))
+
     if browser.url != url:
         raise SystemExit("Falha de autenticação!")
 
@@ -67,7 +70,7 @@ def ia_calc(grades):
     def sumproduct(lists):
         return sum(reduce(mul, data) for data in lists)
 
-    return round(sumproduct(grades) / sum(i[0] for i in grades), 2)
+    return sumproduct(grades) / sum(i[0] for i in grades)
 
 
 def get_input(history, current):
@@ -95,7 +98,8 @@ def get_input(history, current):
 
 
 def print_indexes(indexes):
-    return "\nIAA: \033[1m{}\033[0m \t IA: {} \t IAP: {}".format(*indexes)
+    i = list(map(lambda x: str(x)[:4], indexes))
+    return "\nIAA: \033[1m{}\033[0m \t IA: {} \t IAP: {}".format(*i)
 
 
 if __name__ == '__main__':
@@ -107,17 +111,17 @@ if __name__ == '__main__':
     print("Olá, {}! Seus índices são: {}".format(
               student['name'], print_indexes(student['indexes'])))
 
-    while True:
+    repeat = True
+    while repeat:
         new_history = get_input(student['grades'][:], current)
-        new_indexes = [ia_calc(i) for i in [
+        new_indexes = list(map(ia_calc, [
             new_history,
             new_history[-len(current):],
-            [i for i in new_history if i[1] >= 6]
-        ]]
+            list(filter(lambda x: x[1] >= 6, new_history))
+        ]))
 
-        print("Com as notas informadas, seus índices serão: {}\n".format(
+        print("Com as notas informadas, seus índices serão: {}".format(
             print_indexes(new_indexes)))
 
-        if not bool(input("Digite algo para realizar um novo cálculo ou "
-                          "aperte ENTER para sair: ")):
-            break
+        repeat = bool(input("Digite algo para realizar um novo cálculo ou "
+                            "aperte ENTER para sair: "))
