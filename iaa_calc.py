@@ -53,7 +53,13 @@ def get_current(browser):
     browser.open(url)
 
     current = browser.find_all(class_="rich-table-cell", id=re.compile("id2"))
-    return [name.text for name in current[3::10]]
+    names = [n.text for n in current[3::10]]
+
+    if not names:
+        t = browser.find_all(class_="rich-table-cell", id=re.compile("id1"))
+        names = [n.text for n, c in zip(t[8::9], t[5::9]) if '_' not in c.text]
+
+    return names
 
 
 def round_ufsc(grade):
@@ -109,7 +115,7 @@ if __name__ == '__main__':
     student, current = get_student_data(browser), get_current(browser)
 
     print("Olá, {}! Seus índices são: {}".format(
-              student['name'], print_indexes(student['indexes'])))
+          student['name'], print_indexes(student['indexes'])))
 
     repeat = True
     while repeat:
