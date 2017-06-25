@@ -79,33 +79,42 @@ def ia_calc(grades):
     return sumproduct(grades) / sum(i[0] for i in grades)
 
 
-def get_input(history, current):
-    for name in current:
-        while True:
-            try:
-                grade = float(input("Possível nota em {}: ".format(name)))
-                if not (0 <= grade <= 10):
-                    raise ValueError
-                break
-            except ValueError:
-                print("Nota inválida.", end=' ')
-        while True:
-            try:
-                hours = int(input("Seu número de créditos: "))
-                if hours < 0:
-                    raise ValueError
-                break
-            except ValueError:
-                print("Entrada inválida.", end=' ')
-
-        history.append([hours * 18, round_ufsc(grade)])
-
-    return history
-
-
 def print_indexes(indexes):
     i = list(map(lambda x: str(x)[:4], indexes))
     return "\nIAA: \033[1m{}\033[0m \t IA: {} \t IAP: {}".format(*i)
+
+
+def loop_input(msg, _type, cond):
+    while True:
+        try:
+            var = _type(input(msg))
+            if cond(var):
+                raise ValueError
+            return var
+        except ValueError:
+            pass
+
+
+def get_input(student, current):
+    new_history = student['grades'][:]
+
+    for name in current:
+        grade = loop_input("Possível nota em {}: ".format(name),
+                           float, lambda x: not (0 <= x <= 10))
+        hours = loop_input("Seu número de créditos: ",
+                           int, lambda x: x < 0)
+        new_history.append([hours * 18, round_ufsc(grade)])
+
+    new_indexes = list(map(ia_calc, [
+        new_history,
+        new_history[-len(current):],
+        list(filter(lambda x: x[1] >= 6, new_history))
+    ]))
+
+    print("Com as notas informadas, seus índices serão: {}".format(
+        print_indexes(new_indexes)))
+
+    return lambda x: x and get_input(student, current)
 
 
 if __name__ == '__main__':
@@ -117,17 +126,5 @@ if __name__ == '__main__':
     print("Olá, {}! Seus índices são: {}".format(
           student['name'], print_indexes(student['indexes'])))
 
-    repeat = True
-    while repeat:
-        new_history = get_input(student['grades'][:], current)
-        new_indexes = list(map(ia_calc, [
-            new_history,
-            new_history[-len(current):],
-            list(filter(lambda x: x[1] >= 6, new_history))
-        ]))
-
-        print("Com as notas informadas, seus índices serão: {}".format(
-            print_indexes(new_indexes)))
-
-        repeat = bool(input("Digite algo para realizar um novo cálculo ou "
-                            "aperte ENTER para sair: "))
+    loop_input("ENTER para sair, digite algo para novo cálculo: ",
+               bool, get_input(student, current))
