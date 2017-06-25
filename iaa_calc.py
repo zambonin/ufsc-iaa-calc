@@ -53,11 +53,11 @@ def get_current(browser):
     browser.open(url)
 
     current = browser.find_all(class_="rich-table-cell", id=re.compile("id2"))
-    names = [n.text for n in current[3::10]]
+    names = [n.text for n in current[5::10]]
 
     if not names:
-        t = browser.find_all(class_="rich-table-cell", id=re.compile("id1"))
-        names = [n.text for n, c in zip(t[8::9], t[5::9]) if '_' not in c.text]
+        t = browser.find_all(class_="rich-table-cell", id=re.compile("id15"))
+        names = [n.text for n, c in zip(t[8::9], t[::9]) if c.text == '1']
 
     return names
 
