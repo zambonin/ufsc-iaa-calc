@@ -50,14 +50,15 @@ def get_student_data(browser):
 
 def get_current(browser):
     url = "https://cagr.sistemas.ufsc.br/modules/aluno/espelhoMatricula/"
+    cls = "rich-table-cell"
     browser.open(url)
 
-    current = browser.find_all(class_="rich-table-cell", id=re.compile("id2"))
-    names = [n.text for n in current[5::10]]
+    cur = browser.find_all(class_=cls, id=re.compile("id2"))
+    names = [n.text for n, c in zip(cur[4::10], cur[5::10]) if c.text]
 
     if not names:
-        t = browser.find_all(class_="rich-table-cell", id=re.compile("id15"))
-        names = [n.text for n, c in zip(t[8::9], t[::9]) if c.text == '1']
+        cur = browser.find_all(class_=cls, id=re.compile("id15"))
+        names = [n.text for n, c in zip(cur[8::9], cur[::9]) if c.text == '1']
 
     return names
 
@@ -66,7 +67,7 @@ def round_ufsc(grade):
     decimal = grade % 1
     if decimal < .25:
         return float(int(grade))
-    if (.25 <= decimal < .75):
+    if .25 <= decimal < .75:
         return float(int(grade) + 0.5)
     if decimal >= .75:
         return float(int(grade) + 1)
@@ -100,7 +101,7 @@ def get_input(student, current):
 
     for name in current:
         grade = loop_input("Possível nota em {}: ".format(name),
-                           float, lambda x: not (0 <= x <= 10))
+                           float, lambda x: not 0 <= x <= 10)
         hours = loop_input("Seu número de créditos: ",
                            int, lambda x: x < 0)
         new_history.append([hours * 18, round_ufsc(grade)])
@@ -117,14 +118,18 @@ def get_input(student, current):
     return lambda x: x and get_input(student, current)
 
 
-if __name__ == '__main__':
+def main():
     browser = login(input("Insira sua matrícula: "),
                     getpass("Insira sua senha do CAGR: "))
 
     student, current = get_student_data(browser), get_current(browser)
 
     print("Olá, {}! Seus índices são: {}".format(
-          student['name'], print_indexes(student['indexes'])))
+        student['name'], print_indexes(student['indexes'])))
 
     loop_input("ENTER para sair, digite algo para novo cálculo: ",
                bool, get_input(student, current))
+
+
+if __name__ == '__main__':
+    main()
