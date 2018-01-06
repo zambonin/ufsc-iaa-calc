@@ -1,15 +1,36 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+"""iaa_calc.py
+
+A Python script that simulates performance indices of students from the
+Federal University of Santa Catarina with arbitrary final grades for the
+courses they have taken, scraping the university's internal management
+system for these informations.
+
+    * `robobrowser.RoboBrowser` is a browser that can interact with web pages
+        in various ways, such as clicking in buttons or submitting forms.
+"""
+
 import re
 
-from functools import reduce
 from getpass import getpass
-from operator import mul
 from robobrowser import RoboBrowser
 
 
 def login(user, passwd):
+    """
+    Submits a login form to the university's systems.
+
+    Args:
+        user:   a string representing the user's email, university enrollment
+                identifier, passport identifier, CPF (Individual Taxpayer
+                Registration) or university identifier.
+        passwd: a string representing a password for the user above.
+
+    Returns:
+        A RoboBrowser instance with a logged user.
+    """
     browser = RoboBrowser(history=True, parser="html.parser")
     browser.open("https://sistemas.ufsc.br/login")
 
@@ -22,6 +43,21 @@ def login(user, passwd):
 
 
 def get_student_data(browser):
+    """
+    Scrapes the student's history page for past grades.
+
+    Args:
+        browser:    a RoboBrowser instance with a logged in user.
+
+    Returns:
+        A dictionary consisting of the student's name, a matrix of grades
+        and their respective quantity of credits and the student's current
+        performance indices.
+
+    Raises:
+        SystemExit: in the case of a wrong password or
+        if the system is not available.
+    """
     url = "https://cagr.sistemas.ufsc.br/modules/aluno/historicoEscolar/"
     browser.open(url)
 
@@ -49,6 +85,15 @@ def get_student_data(browser):
 
 
 def get_current(browser):
+    """
+    Scrapes the student's current classes page for their names.
+
+    Args:
+        browser:    a RoboBrowser instance with a logged in user.
+
+    Returns:
+        A list with the student's current classes names.
+    """
     url = "https://cagr.sistemas.ufsc.br/modules/aluno/espelhoMatricula/"
     cls = "rich-table-cell"
     browser.open(url)
@@ -64,28 +109,63 @@ def get_current(browser):
 
 
 def round_ufsc(grade):
+    """
+    Rounds indices according to the university's rule
+    (R17/CUn/97, Art. 71, §1).
+
+    Args:
+        grade:  float representing the index.
+
+    Returns:
+        A rounded float that can only end in 0.0 or 0.5.
+    """
     decimal = grade % 1
     if decimal < .25:
         return float(int(grade))
-    if .25 <= decimal < .75:
+    elif .25 <= decimal < .75:
         return float(int(grade) + 0.5)
-    if decimal >= .75:
-        return float(int(grade) + 1)
+    return float(int(grade) + 1)
 
 
 def ia_calc(grades):
-    def sumproduct(lists):
-        return sum(reduce(mul, data) for data in lists)
+    """
+    Calculates the accumulated indices according to the university's rule
+    (R17/CUn/97, Art. 43, I).
 
-    return sumproduct(grades) / sum(i[0] for i in grades)
+    Args:
+        grades: a list of pairs, each one consisting of a grade from 0 to 10
+                and the number of hours for the class.
+
+    Returns:
+        A float representing the weighted mean of the grades
+        considering the number of hours for the classes.
+    """
+    return sum(h * g for h, g in grades) / sum(h for h, _ in grades)
 
 
 def print_indexes(indexes):
-    i = list(map(lambda x: str(x)[:4], indexes))
-    return "\nIAA: \033[1m{}\033[0m \t IA: {} \t IAP: {}".format(*i)
+    """Pretty-prints the three indices parsed from the student's page."""
+    model = "\nIAA: \033[1m{}\033[0m \t IA: {} \t IAP: {}"
+    return model.format(*list(map(lambda x: str(x)[:4], indexes)))
 
 
 def loop_input(msg, _type, cond):
+    """
+    Prevents input from being accepted if it does not meet certain criteria.
+
+    Args:
+        msg:    a string containing the question for the input.
+        _type:  a Python type or class.
+        cond:   a function representing some restriction on the content
+                of the variable.
+
+    Returns:
+        A variable of type `_type` that respects the conditions given.
+
+    Raises:
+        ValueError: if the cast or condition are not met, this is raised
+                    to indicate that the user should input something else.
+    """
     while True:
         try:
             var = _type(input(msg))
@@ -97,6 +177,18 @@ def loop_input(msg, _type, cond):
 
 
 def get_input(student, current):
+    """
+    Queries the possible grades and how many credits each class has,
+    calculating new indices with this information.
+
+    Args:
+        student:    a dictionary with information about a student's grades.
+        current:    list of current classes a student is taking.
+
+    Returns:
+        An identity function and a new call of the function so the user can
+        calculate multiple possibilities of indices using `loop_input`.
+    """
     new_history = student['grades'][:]
 
     for name in current:
@@ -119,7 +211,11 @@ def get_input(student, current):
 
 
 def main():
-    browser = login(input("Insira sua matrícula: "),
+    """
+    Logins the user, presents their current indices and asks for a preview
+    of grades for this semester's classes, showing new indices thereafter.
+    """
+    browser = login(input("Insira sua matrícula ou idUFSC: "),
                     getpass("Insira sua senha do CAGR: "))
 
     student, current = get_student_data(browser), get_current(browser)
