@@ -13,8 +13,8 @@ system for these informations.
 """
 
 import re
-
 from getpass import getpass
+
 from robobrowser import RoboBrowser
 
 
@@ -68,8 +68,12 @@ def get_student_data(browser):
         raise SystemExit("Falha de autenticação!")
 
     hist = browser.find_all(class_="rich-table-cell ")
+
+    if hist[1::7][-1].text == 'FORMADO':
+        raise SystemExit("Usuário já formado.")
+
     grades = [[int(hours.text), float(grade.text)]
-              for hours, grade in zip(hist[2::7], hist[3::7])]
+              for hours, grade in zip(hist[2::7], hist[3::7]) if hours.text]
 
     try:
         indexes = [browser.find_all(class_="disciplina_footer_col{}"
@@ -99,13 +103,15 @@ def get_current(browser):
     browser.open(url)
 
     cur = browser.find_all(class_=cls, id=re.compile("id2"))
-    names = [n.text for n, c in zip(cur[4::10], cur[5::10]) if c.text]
+    classes = [(n.text, int(c.text))
+               for n, c in zip(cur[3::10], cur[5::10]) if len(c.text)]
 
-    if not names:
+    if not classes:
         cur = browser.find_all(class_=cls, id=re.compile("id15"))
-        names = [n.text for n, c in zip(cur[8::9], cur[::9]) if c.text == '1']
+        classes = [(n.text, int(h.text)) for n, h, c
+                   in zip(cur[8::9], cur[4::9], cur[5::9]) if '_' not in c.text]
 
-    return names
+    return classes
 
 
 def round_ufsc(grade):
@@ -191,11 +197,12 @@ def get_input(student, current):
     """
     new_history = student['grades'][:]
 
-    for name in current:
+    for name, hours in current:
         grade = loop_input("Possível nota em {}: ".format(name),
                            float, lambda x: not 0 <= x <= 10)
-        hours = loop_input("Seu número de créditos: ",
-                           int, lambda x: x < 0)
+        if not hours:
+            hours = loop_input("Seu número de créditos: ",
+                               int, lambda x: x < 0)
         new_history.append([hours * 18, round_ufsc(grade)])
 
     new_indexes = list(map(ia_calc, [
