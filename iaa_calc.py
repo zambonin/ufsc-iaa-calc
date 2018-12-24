@@ -1,5 +1,6 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# pylint: disable=W1632
 
 """iaa_calc.py
 
@@ -12,7 +13,8 @@ system for these informations.
         in various ways, such as clicking in buttons or submitting forms.
 """
 
-import re
+from __future__ import absolute_import, division
+from re import compile as _compile
 from getpass import getpass
 
 from robobrowser import RoboBrowser
@@ -69,22 +71,27 @@ def get_student_data(browser):
 
     hist = browser.find_all(class_="rich-table-cell ")
 
-    if hist[1::7][-1].text == 'FORMADO':
+    if hist[1::7][-1].text == "FORMADO":
         raise SystemExit("Usuário já formado.")
 
-    grades = [[int(hours.text), float(grade.text)]
-              for hours, grade in zip(hist[2::7], hist[3::7]) if hours.text]
+    grades = [
+        [int(hours.text), float(grade.text)]
+        for hours, grade in zip(hist[2::7], hist[3::7])
+        if hours.text
+    ]
 
     try:
-        indexes = [browser.find_all(class_="disciplina_footer_col{}"
-                                    .format(i))[-1].text for i in [4, 2, 6]]
+        base = "disciplina_footer_col{}"
+        indexes = [
+            browser.find_all(class_=base.format(i))[-1].text for i in [4, 2, 6]
+        ]
     except IndexError:
         raise SystemExit("CAGR indisponível.")
 
     return {
-        'name': browser.find(class_="rich-panel-header ").text,
-        'grades': grades,
-        'indexes': indexes,
+        "name": browser.find(class_="rich-panel-header ").text,
+        "grades": grades,
+        "indexes": indexes,
     }
 
 
@@ -102,14 +109,20 @@ def get_current(browser):
     cls = "rich-table-cell"
     browser.open(url)
 
-    cur = browser.find_all(class_=cls, id=re.compile("id2"))
-    classes = [(n.text, int(c.text))
-               for n, c in zip(cur[3::10], cur[5::10]) if len(c.text)]
+    cur = browser.find_all(class_=cls, id=_compile("id2"))
+    classes = [
+        (n.text, int(c.text))
+        for n, c in zip(cur[3::10], cur[5::10])
+        if len(c.text)
+    ]
 
     if not classes:
-        cur = browser.find_all(class_=cls, id=re.compile("id15"))
-        classes = [(n.text, int(h.text)) for n, h, c
-                   in zip(cur[8::9], cur[4::9], cur[5::9]) if '_' not in c.text]
+        cur = browser.find_all(class_=cls, id=_compile("id15"))
+        classes = [
+            (n.text, int(h.text))
+            for n, h, c in zip(cur[8::9], cur[4::9], cur[5::9])
+            if "_" not in c.text
+        ]
 
     return classes
 
@@ -126,9 +139,9 @@ def round_ufsc(grade):
         A rounded float that can only end in 0.0 or 0.5.
     """
     decimal = grade % 1
-    if decimal < .25:
+    if decimal < 0.25:
         return float(int(grade))
-    elif .25 <= decimal < .75:
+    if 0.25 <= decimal < 0.75:
         return float(int(grade) + 0.5)
     return float(int(grade) + 1)
 
@@ -195,24 +208,34 @@ def get_input(student, current):
         An identity function and a new call of the function so the user can
         calculate multiple possibilities of indices using `loop_input`.
     """
-    new_history = student['grades'][:]
+    new_history = student["grades"][:]
 
     for name, hours in current:
-        grade = loop_input("Possível nota em {}: ".format(name),
-                           float, lambda x: not 0 <= x <= 10)
+        grade = loop_input(
+            "Possível nota em {}: ".format(name),
+            float,
+            lambda x: not 0 <= x <= 10,
+        )
         if not hours:
-            hours = loop_input("Seu número de créditos: ",
-                               int, lambda x: x < 0)
+            hours = loop_input("Seu número de créditos: ", int, lambda x: x < 0)
         new_history.append([hours * 18, round_ufsc(grade)])
 
-    new_indexes = list(map(ia_calc, [
-        new_history,
-        new_history[-len(current):],
-        list(filter(lambda x: x[1] >= 6, new_history))
-    ]))
+    new_indexes = list(
+        map(
+            ia_calc,
+            [
+                new_history,
+                new_history[-len(current) :],
+                list(filter(lambda x: x[1] >= 6, new_history)),
+            ],
+        )
+    )
 
-    print("Com as notas informadas, seus índices serão: {}".format(
-        print_indexes(new_indexes)))
+    print(
+        "Com as notas informadas, seus índices serão: {}".format(
+            print_indexes(new_indexes)
+        )
+    )
 
     return lambda x: x and get_input(student, current)
 
@@ -222,17 +245,25 @@ def main():
     Logins the user, presents their current indices and asks for a preview
     of grades for this semester's classes, showing new indices thereafter.
     """
-    browser = login(input("Insira sua matrícula ou idUFSC: "),
-                    getpass("Insira sua senha do CAGR: "))
+    browser = login(
+        input("Insira sua matrícula ou idUFSC: "),
+        getpass("Insira sua senha do CAGR: "),
+    )
 
     student, current = get_student_data(browser), get_current(browser)
 
-    print("Olá, {}! Seus índices são: {}".format(
-        student['name'], print_indexes(student['indexes'])))
+    print(
+        "Olá, {}! Seus índices são: {}".format(
+            student["name"], print_indexes(student["indexes"])
+        )
+    )
 
-    loop_input("ENTER para sair, digite algo para novo cálculo: ",
-               bool, get_input(student, current))
+    loop_input(
+        "ENTER para sair, digite algo para novo cálculo: ",
+        bool,
+        get_input(student, current),
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
