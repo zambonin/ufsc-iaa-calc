@@ -69,7 +69,7 @@ def get_student_data(browser):
     if browser.url != url:
         raise SystemExit("Falha de autenticação!")
 
-    hist = browser.find_all(class_="rich-table-cell ")
+    hist = browser.find_all(class_="rich-table-cell")
 
     if hist[1::7][-1].text == "FORMADO":
         raise SystemExit("Usuário já formado.")
@@ -89,7 +89,7 @@ def get_student_data(browser):
         raise SystemExit("CAGR indisponível.")
 
     return {
-        "name": browser.find(class_="rich-panel-header ").text,
+        "name": browser.find(class_="rich-panel-header").text,
         "grades": grades,
         "indexes": indexes,
     }
