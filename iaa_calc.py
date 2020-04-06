@@ -17,6 +17,8 @@ from __future__ import absolute_import, division
 from re import compile as _compile
 from getpass import getpass
 
+import werkzeug
+werkzeug.cached_property = werkzeug.utils.cached_property
 from robobrowser import RoboBrowser
 
 
